@@ -61,9 +61,10 @@ impl Ball {
         ctx.draw_circle_v(self.position, self.radius, self.color);
     }
 
-    fn check_collision(&mut self, ctx: &mut RaylibDrawHandle, paddle: &Rectangle) {
+    fn check_collision(&mut self, paddle: &Rectangle) {
         let closest_x = Ball::clamp(
             self.position.x, paddle.x, paddle.x + paddle.width);
+
         let closest_y = Ball::clamp(
             self.position.y, paddle.y, paddle.y + paddle.height);
 
@@ -73,12 +74,40 @@ impl Ball {
         let distance_squared = distance_x * distance_x
             + distance_y * distance_y;
 
-        if (distance_squared >= (self.radius * self.radius)) {
+        if distance_squared >= self.radius * self.radius {
             return;
         }
 
-        // Collision occurred, change the direction of x velocity
-        self.velocity.dx = -self.velocity.dx;
+        // Determine the side of the collision
+        let paddle_center_x = paddle.x + paddle.width  / 2.0;
+        let paddle_center_y = paddle.y + paddle.height / 2.0;
+
+        let dx = self.position.x - paddle_center_x;
+        let dy = self.position.y - paddle_center_y;
+
+        if dx.abs() > dy.abs() {
+            // Collision on the left or right side
+            if dx > 0.0 {
+                // Collision on the right side
+                self.position.x = paddle.x + paddle.width + self.radius;
+                self.velocity.dx = self.velocity.dx.abs();
+            } else {
+                // Collision on the left side
+                self.position.x = paddle.x - self.radius;
+                self.velocity.dx = -self.velocity.dx.abs();
+            }
+        } else {
+            // Collision on the top or bottom side
+            if dy > 0.0 {
+                // Collision on the bottom side
+                self.position.y = paddle.y + paddle.height + self.radius;
+                self.velocity.dy = self.velocity.dy.abs();
+            } else {
+                // Collision on the top side
+                self.position.y = paddle.y - self.radius;
+                self.velocity.dy = -self.velocity.dy.abs();
+            }
+        }
     }
 
     fn clamp(value: f32, min: f32, max: f32) -> f32 {
@@ -106,7 +135,7 @@ fn main() {
 
     let mut ball = Ball {
         position : Vector2::new(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0),
-        velocity : Velocity { dx: 15.0, dy: 0.0 },
+        velocity : Velocity { dx: 15.0, dy: 13.0 },
         radius   : 30.0,
         color    : Color::GREEN,
     };
@@ -152,7 +181,7 @@ fn main() {
         ball.move_ball();
         ball.draw(&mut ctx);
 
-        ball.check_collision(&mut ctx, &player);
-        ball.check_collision(&mut ctx, &computer);
+        ball.check_collision(&player);
+        ball.check_collision(&computer);
     }
 }
