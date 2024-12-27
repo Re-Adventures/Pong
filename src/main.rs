@@ -1,7 +1,7 @@
 use raylib::prelude::*;
 
-const SCREEN_WIDTH  : i32 = 640;
-const SCREEN_HEIGHT : i32 = 480;
+const SCREEN_WIDTH  : f32 = 1280.0;
+const SCREEN_HEIGHT : f32 = 720.0;
 
 #[derive(Eq, PartialEq)]
 enum Moves {
@@ -20,8 +20,8 @@ struct Position {
 
 /// Represents the velocity of an object
 struct Velocity {
-    dx: i32,
-    dy: i32,
+    dx: f32,
+    dy: f32,
 }
 
 /// The paddle object used for hitting the ball
@@ -30,30 +30,31 @@ struct Paddle {
     height   : usize,
     position : Position,
     speed    : usize,
+    score    : usize,
 }
 
 /// The ball for playing the game
 struct Ball {
-    position       : Position,
+    position       : Vector2,
     velocity       : Velocity,
     radius         : f32,
-    speed          : i32,
     move_direction : Moves
 }
 
 impl Ball {
+    /// Updates the position of the ball
     fn move_ball(&mut self) {
         // Check if the ball has gone out of bounds
         // X-Axis check
-        if self.position.x - (self.radius as i32) <= 0
-                || self.position.x + (self.radius as i32) >= SCREEN_WIDTH {
+        if self.position.x - self.radius <= 0.0
+                || self.position.x + self.radius >= SCREEN_WIDTH {
             // Reverse the x axis velocity
             self.velocity.dx = -self.velocity.dx;
         }
 
         // Y-Axis check
-        if self.position.y - (self.radius as i32) <= 0
-                || self.position.y + (self.radius as i32) >= SCREEN_HEIGHT {
+        if self.position.y - self.radius <= 0.0
+                || self.position.y + self.radius >= SCREEN_HEIGHT {
             // Reverse the y axis velocity
             self.velocity.dy = -self.velocity.dy;
         }
@@ -61,10 +62,9 @@ impl Ball {
         // Now update the position of the ball
         self.position.x += self.velocity.dx;
         self.position.y += self.velocity.dy;
-
-
     }
 
+    /// Function for drawing the ball
     fn draw(&self, ctx: &mut RaylibDrawHandle) {
         ctx.draw_circle(
             self.position.x as i32, self.position.y as i32,
@@ -85,10 +85,9 @@ fn main() {
         .build();
 
     let mut ball = Ball {
-        position       : Position { x: SCREEN_WIDTH / 2, y: SCREEN_HEIGHT / 2 },
-        velocity       : Velocity { dx: 5, dy: 3 }, 
+        position       : Vector2::new(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0),
+        velocity       : Velocity { dx: 15.0, dy: 13.0 }, 
         radius         : 30.0,
-        speed          : 10,
         move_direction : Moves::Right,
     };
 
