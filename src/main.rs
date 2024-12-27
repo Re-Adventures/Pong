@@ -24,21 +24,12 @@ struct Velocity {
     dy: f32,
 }
 
-/// The paddle object used for hitting the ball
-struct Paddle {
-    width    : usize,
-    height   : usize,
-    position : Position,
-    speed    : usize,
-    score    : usize,
-}
-
 /// The ball for playing the game
 struct Ball {
-    position       : Vector2,
-    velocity       : Velocity,
-    radius         : f32,
-    move_direction : Moves
+    position : Vector2,
+    velocity : Velocity,
+    radius   : f32,
+    color    : Color,
 }
 
 impl Ball {
@@ -66,9 +57,38 @@ impl Ball {
 
     /// Function for drawing the ball
     fn draw(&self, ctx: &mut RaylibDrawHandle) {
-        ctx.draw_circle(
-            self.position.x as i32, self.position.y as i32,
-            self.radius, Color::GREEN);
+        // Draw the circle onto the screen
+        ctx.draw_circle_v(self.position, self.radius, self.color);
+    }
+
+    fn check_collision(&mut self, ctx: &mut RaylibDrawHandle, paddle: &Rectangle) {
+        let closest_x = Ball::clamp(
+            self.position.x, paddle.x, paddle.x + paddle.width);
+        let closest_y = Ball::clamp(
+            self.position.y, paddle.y, paddle.y + paddle.height);
+
+        let distance_x = self.position.x - closest_x;
+        let distance_y = self.position.y - closest_y;
+
+        let distance_squared = distance_x * distance_x
+            + distance_y * distance_y;
+
+        if (distance_squared >= (self.radius * self.radius)) {
+            return;
+        }
+
+        // Collision occurred, change the direction of x velocity
+        self.velocity.dx = -self.velocity.dx;
+    }
+
+    fn clamp(value: f32, min: f32, max: f32) -> f32 {
+        if value < min {
+            min
+        } else if value > max {
+            max
+        } else {
+            value
+        }
     }
 }
 
@@ -85,11 +105,32 @@ fn main() {
         .build();
 
     let mut ball = Ball {
-        position       : Vector2::new(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0),
-        velocity       : Velocity { dx: 15.0, dy: 13.0 }, 
-        radius         : 30.0,
-        move_direction : Moves::Right,
+        position : Vector2::new(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0),
+        velocity : Velocity { dx: 15.0, dy: 0.0 },
+        radius   : 30.0,
+        color    : Color::GREEN,
     };
+
+    // The space to be left from the window edge to paddle
+    let paddle_padding = 30.0;
+
+    let paddle_width   = 30.0;
+    let paddle_height  = 150.0;
+
+    let paddle_pos_y  = (SCREEN_HEIGHT / 2.0) - (paddle_height / 2.0);
+
+    // The player paddle
+    let player = Rectangle::new(
+        paddle_width + paddle_padding, paddle_pos_y, paddle_width, 150.0);
+
+    // The computer paddle
+    let computer = Rectangle::new(
+        // * 2 is because the rectangle x starts at top left of the rectangle
+        // & the rectangle will expand to its right (width pixels)
+        SCREEN_WIDTH - (paddle_width * 2.0) - paddle_padding,
+        paddle_pos_y,
+        paddle_width,
+        150.0);
 
     // Game loop
     // Run this loop forever
@@ -99,16 +140,19 @@ fn main() {
             break;
         }
 
-        // ball.move_ball(&window);
-
         // Get the context for drawing on the window
         let mut ctx = window.begin_drawing(&raylib_thread);
 
         ctx.clear_background(Color::BLACK);
 
-        ball.move_ball();
+        // Draw the paddles
+        ctx.draw_rectangle_rec(player, Color::WHITE);
+        ctx.draw_rectangle_rec(computer, Color::WHITE);
 
+        ball.move_ball();
         ball.draw(&mut ctx);
 
+        ball.check_collision(&mut ctx, &player);
+        ball.check_collision(&mut ctx, &computer);
     }
 }
