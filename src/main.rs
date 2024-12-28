@@ -3,26 +3,50 @@ use raylib::prelude::*;
 const SCREEN_WIDTH  : f32 = 1280.0;
 const SCREEN_HEIGHT : f32 = 720.0;
 
-#[derive(Eq, PartialEq)]
-enum Moves {
-    Up,
-    Down,
-    Left,
-    Right,
-    Stopped,
-}
-
-/// Represents the position of an object
-struct Position {
-    x: i32,
-    y: i32,
-}
-
 /// Represents the velocity of an object
 struct Velocity {
     dx: f32,
     dy: f32,
 }
+
+/// The paddle used for hitting the ball
+struct Paddle {
+    position : Rectangle,
+    speed    : f32,
+    score    : usize,
+}
+
+impl Paddle {
+    /// Method for updating the position of the paddle
+    fn move_paddle(&mut self, window: &RaylibHandle) {
+        if window.is_key_down(KeyboardKey::KEY_S) {
+            // Move the player down
+            self.position.y += self.speed;
+
+            // If the paddle moves out of bottom of the screen, then move it
+            // back into the window
+            if self.position.y + self.position.height > SCREEN_HEIGHT {
+                self.position.y = SCREEN_HEIGHT - self.position.height;
+            }
+        }
+        else if window.is_key_down(KeyboardKey::KEY_W) {
+            // Move the player up
+            self.position.y -= self.speed;
+
+            // If the paddle moves out of top of the screen, then move it
+            // back into the window
+            if self.position.y < 0.0 {
+                self.position.y = 0.0;
+            }
+        }
+    }
+
+    // Draws the paddle onto the window
+    fn draw(&self, ctx: &mut RaylibDrawHandle) {
+        ctx.draw_rectangle_rec(&self.position, Color::WHITE);
+    }
+}
+
 
 /// The ball for playing the game
 struct Ball {
@@ -86,7 +110,7 @@ impl Ball {
         let dy = self.position.y - paddle_center_y;
 
         if dx.abs() > dy.abs() {
-            // Collision on the left or right side
+            // Collision on the x-axis
             if dx > 0.0 {
                 // Collision on the right side
                 self.position.x = paddle.x + paddle.width + self.radius;
@@ -97,7 +121,7 @@ impl Ball {
                 self.velocity.dx = -self.velocity.dx.abs();
             }
         } else {
-            // Collision on the top or bottom side
+            // Collision on the y-axis
             if dy > 0.0 {
                 // Collision on the bottom side
                 self.position.y = paddle.y + paddle.height + self.radius;
@@ -149,17 +173,25 @@ fn main() {
     let paddle_pos_y  = (SCREEN_HEIGHT / 2.0) - (paddle_height / 2.0);
 
     // The player paddle
-    let player = Rectangle::new(
-        paddle_width + paddle_padding, paddle_pos_y, paddle_width, 150.0);
+    let mut player = Paddle {
+        position: Rectangle::new(
+            paddle_width + paddle_padding, paddle_pos_y, paddle_width, 150.0),
+        score: 0,
+        speed: 15.0,
+    };
 
     // The computer paddle
-    let computer = Rectangle::new(
-        // * 2 is because the rectangle x starts at top left of the rectangle
-        // & the rectangle will expand to its right (width pixels)
-        SCREEN_WIDTH - (paddle_width * 2.0) - paddle_padding,
-        paddle_pos_y,
-        paddle_width,
-        150.0);
+    let mut computer = Paddle {
+        position: Rectangle::new(
+            // * 2 is because the rectangle x starts at top left of the
+            // rectangle & the rectangle will expand to its right (width pixels)
+            SCREEN_WIDTH - (paddle_width * 2.0) - paddle_padding,
+            paddle_pos_y,
+            paddle_width,
+            150.0),
+        score: 0,
+        speed: 15.0,
+    };
 
     // Game loop
     // Run this loop forever
@@ -169,19 +201,26 @@ fn main() {
             break;
         }
 
+        player.move_paddle(&window);
+
         // Get the context for drawing on the window
         let mut ctx = window.begin_drawing(&raylib_thread);
 
         ctx.clear_background(Color::BLACK);
 
         // Draw the paddles
-        ctx.draw_rectangle_rec(player, Color::WHITE);
-        ctx.draw_rectangle_rec(computer, Color::WHITE);
+        ctx.draw_rectangle_rec(player.position, Color::WHITE);
+        ctx.draw_rectangle_rec(computer.position, Color::WHITE);
 
         ball.move_ball();
         ball.draw(&mut ctx);
 
-        ball.check_collision(&player);
-        ball.check_collision(&computer);
+        ball.check_collision(&player.position);
+        ball.check_collision(&computer.position);
+
+        // TODO: Implement paddle moving logic
+        player.draw(&mut ctx);
+
+        // TODO: Implement computer AI
     }
 }
